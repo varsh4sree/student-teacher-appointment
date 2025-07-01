@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Approve Student Registrations</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 420px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.15);
+      text-align: center;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .student-card {
+      background: white;
+      padding: 15px;
+      margin: 10px auto;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      text-align: left;
+    }
+
+    .student-card p {
+      margin: 5px 0;
+    }
+
+    button {
+      background-color: #00796B;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #005e54;
+    }
+
+    #studentList {
+      margin-top: 20px;
+    }
+
+    a {
+      display: block;
+      margin-top: 20px;
+      color: #6a1b9a;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Approve Student Registrations</h1>
+    <div id="studentList">Loading...</div>
+    <a href="admindash.html">← Back to Dashboard</a>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getFirestore, collection, query, where, getDocs, updateDoc, doc
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+};
+// Replace with your own Firebase config to run this project
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const studentList = document.getElementById("studentList");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "adminlogin.html";
+        return;
+      }
+
+      try {
+        const q = query(collection(db, "students"), where("approved", "==", false));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          studentList.innerHTML = "<p>No pending approvals.</p>";
+          return;
+        }
+
+        studentList.innerHTML = "";
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const id = docSnap.id;
+
+          const div = document.createElement("div");
+          div.className = "student-card";
+          div.innerHTML = `
+            <p><strong>Name:</strong> ${data.name}</p>
+            <p><strong>Email:</strong> ${data.email}</p>
+            <p><strong>Department:</strong> ${data.department}</p>
+            <button onclick="approveStudent('${id}')">Approve</button>
+          `;
+          studentList.appendChild(div);
+        });
+      } catch (err) {
+        console.error("Firestore fetch error:", err.message);
+        studentList.innerHTML = `<p>Error loading students: ${err.message}</p>`;
+      }
+    });
+
+    window.approveStudent = async (id) => {
+      try {
+        await updateDoc(doc(db, "students", id), { approved: true });
+        alert("Student approved!");
+        location.reload();
+      } catch (err) {
+        alert("Error approving student: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>

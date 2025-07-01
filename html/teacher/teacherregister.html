@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Teacher Registration</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+    background-size: cover;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+    .box {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+      width: 300px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    input, textarea {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #6a1b9a;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #msg {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .login-toggle {
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    .login-toggle a {
+      color: #6a1b9a;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Teacher Register</h2>
+    <input type="text" id="name" placeholder="Full Name" />
+    <input type="email" id="email" placeholder="Email" />
+    <input type="text" id="subject" placeholder="Subject" />
+    <input type="text" id="department" placeholder="Department" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="registerBtn">Register</button>
+    <div id="msg"></div>
+
+    <!-- Go to Login button (hidden by default) -->
+    <div id="loginLink" style="display: none; margin-top: 10px; text-align: center;">
+      <a href="teacherlogin.html">
+        <button style="background-color: #444;">Go to Login</button>
+      </a>
+    </div>
+
+    <!-- Toggle to login link always shown -->
+    <div class="login-toggle">
+      Already have an account?
+      <a href="teacherlogin.html">Login here</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+};
+// Replace with your own Firebase config to run this project
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    document.getElementById("registerBtn").onclick = async () => {
+      const tname = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const subject = document.getElementById("subject").value.trim();
+      const department = document.getElementById("department").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const msg = document.getElementById("msg");
+      const loginLink = document.getElementById("loginLink");
+
+      if (!tname || !email || !subject || !department || !password) {
+        msg.textContent = "Please fill in all fields.";
+        msg.style.color = "red";
+        loginLink.style.display = "none";
+        return;
+      }
+
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "teachers", cred.user.uid), {
+          name: tname,
+          email,
+          subject,
+          department,
+          role: "teacher",
+          approved: false
+        });
+
+        msg.textContent = "✅ Registered! Please wait for admin approval.";
+        msg.style.color = "green";
+        loginLink.style.display = "block";
+
+        // Clear form
+        document.getElementById("name").value = "";
+        document.getElementById("email").value = "";
+        document.getElementById("subject").value = "";
+        document.getElementById("department").value = "";
+        document.getElementById("password").value = "";
+      } catch (err) {
+        msg.textContent = "Error: " + err.message;
+        msg.style.color = "red";
+        loginLink.style.display = "none";
+      }
+    };
+  </script>
+</body>
+</html>

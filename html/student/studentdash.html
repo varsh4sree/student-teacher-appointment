@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .box {
+      background: rgba(255, 255, 255, 0.95);
+      max-width: 450px;
+      width: 100%;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    h3 {
+      color: #444;
+      margin-bottom: 10px;
+    }
+
+    select, button, textarea, input {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    button {
+      background: #470079;
+      color: white;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background: #520069;
+    }
+
+    #logoutBtn {
+      background-color: #d32f2f;
+    }
+
+    #actions {
+      display: none;
+      margin-top: 15px;
+    }
+
+    #bookBox, #msgBox, #apptList {
+      display: none;
+    }
+
+    #result {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    ul {
+      padding: 0;
+      list-style: none;
+    }
+
+    ul li {
+      background: #f9f9f9;
+      padding: 8px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2 id="welcome">Welcome, Student</h2>
+
+    <label for="teacherSelect">Select a Teacher:</label>
+    <select id="teacherSelect">
+      <option value="">-- Select --</option>
+    </select>
+
+    <div id="actions">
+      <button onclick="showBooking()">Book Appointment</button>
+      <button onclick="showMessage()">Send Message</button>
+    </div>
+
+    <div id="bookBox">
+      <h3>Book Appointment</h3>
+      <input type="date" id="apptDate" />
+      <input type="time" id="apptTime" />
+      <textarea id="apptReason" placeholder="Reason (optional)"></textarea>
+      <button onclick="submitAppointment()">Submit</button>
+    </div>
+
+    <div id="msgBox">
+      <h3>Send Message</h3>
+      <textarea id="msgText" placeholder="Write your message"></textarea>
+      <button onclick="submitMessage()">Send</button>
+    </div>
+
+    <button onclick="viewAppointments()">View My Appointments</button>
+    <div id="apptList" style="margin-top: 15px;">
+      <h3>Approved Appointments</h3>
+      <ul id="approvedAppts"></ul>
+    </div>
+
+    <div id="result"></div>
+    <button id="logoutBtn">Logout</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, addDoc, doc, getDoc,
+      query, where
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    const app = initializeApp({
+     apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+    });
+
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const teacherSelect = document.getElementById("teacherSelect");
+    const actions = document.getElementById("actions");
+    const bookBox = document.getElementById("bookBox");
+    const msgBox = document.getElementById("msgBox");
+    const result = document.getElementById("result");
+    const welcome = document.getElementById("welcome");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const apptList = document.getElementById("apptList");
+    const approvedAppts = document.getElementById("approvedAppts");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "studentlogin.html";
+        return;
+      }
+
+      try {
+        const studentDoc = await getDoc(doc(db, "students", user.uid));
+        const studentName = studentDoc.exists() ? studentDoc.data().name : "Student";
+        welcome.textContent = `Welcome, ${studentName}`;
+
+        const snap = await getDocs(collection(db, "teachers"));
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.approved && data.name) {
+            const option = document.createElement("option");
+            option.value = docSnap.id;
+            option.textContent = data.name;
+            teacherSelect.appendChild(option);
+          }
+        });
+      } catch (err) {
+        console.error("Error loading dashboard:", err);
+        welcome.textContent = "Welcome, Student";
+      }
+    });
+
+    teacherSelect.onchange = () => {
+      if (teacherSelect.value) {
+        actions.style.display = "block";
+        result.textContent = "";
+        bookBox.style.display = "none";
+        msgBox.style.display = "none";
+        apptList.style.display = "none";
+      } else {
+        actions.style.display = "none";
+      }
+    };
+
+    window.showBooking = () => {
+      bookBox.style.display = "block";
+      msgBox.style.display = "none";
+      apptList.style.display = "none";
+      result.textContent = "";
+    };
+
+    window.showMessage = () => {
+      msgBox.style.display = "block";
+      bookBox.style.display = "none";
+      apptList.style.display = "none";
+      result.textContent = "";
+    };
+
+    window.submitAppointment = async () => {
+      const teacherId = teacherSelect.value;
+      const teacherName = teacherSelect.options[teacherSelect.selectedIndex].textContent;
+      const date = document.getElementById("apptDate").value;
+      const time = document.getElementById("apptTime").value;
+      const reason = document.getElementById("apptReason").value;
+
+      if (!date || !time) {
+        result.textContent = "Please fill in date and time.";
+        result.style.color = "red";
+        return;
+      }
+
+      await addDoc(collection(db, "appointments"), {
+        studentId: auth.currentUser.uid,
+        teacherId,
+        teacherName,
+        date,
+        time,
+        reason,
+        status: "pending"
+      });
+
+      result.textContent = "Appointment request sent.";
+      result.style.color = "green";
+      bookBox.style.display = "none";
+    };
+
+    window.submitMessage = async () => {
+      const teacherId = teacherSelect.value;
+      const teacherName = teacherSelect.options[teacherSelect.selectedIndex].textContent;
+      const message = document.getElementById("msgText").value;
+
+      if (!message.trim()) {
+        result.textContent = "Please enter a message.";
+        result.style.color = "red";
+        return;
+      }
+
+      await addDoc(collection(db, "messages"), {
+        studentId: auth.currentUser.uid,
+        teacherId,
+        teacherName,
+        message,
+        timestamp: new Date()
+      });
+
+      result.textContent = "Message sent.";
+      result.style.color = "green";
+      msgBox.style.display = "none";
+    };
+
+    window.viewAppointments = async () => {
+      approvedAppts.innerHTML = "";
+      apptList.style.display = "block";
+
+      const q = query(
+        collection(db, "appointments"),
+        where("studentId", "==", auth.currentUser.uid),
+        where("status", "==", "approved")
+      );
+
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        approvedAppts.innerHTML = "<li>No approved appointments yet.</li>";
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const li = document.createElement("li");
+        li.textContent = `With ${data.teacherName} on ${data.date} at ${data.time}`;
+        approvedAppts.appendChild(li);
+      });
+    };
+
+    logoutBtn.onclick = () => {
+      signOut(auth).then(() => {
+        window.location.href = "studentlogin.html";
+      });
+    };
+  </script>
+</body>
+</html>

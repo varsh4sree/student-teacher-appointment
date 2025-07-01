@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Messages from Students</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 550px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.15);
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #333;
+    }
+
+    #deleteAllBtn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      background-color: #d32f2f;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .card {
+      background: white;
+      padding: 15px 20px;
+      margin: 15px 0;
+      border-radius: 10px;
+      box-shadow: 0 0 5px #ccc;
+    }
+
+    .card p {
+      margin: 6px 0;
+      font-size: 14px;
+    }
+
+    #container {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <h2>Messages from Students</h2>
+      <button id="deleteAllBtn">Delete All</button>
+    </div>
+
+    <div id="container">Loading...</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getFirestore, collection, query, where, getDocs, doc, getDoc, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    const app = initializeApp({
+     apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+    });
+
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const container = document.getElementById("container");
+    const deleteAllBtn = document.getElementById("deleteAllBtn");
+
+    let teacherUid = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "teacherlogin.html";
+        return;
+      }
+
+      teacherUid = user.uid;
+
+      try {
+        const q = query(
+          collection(db, "messages"),
+          where("teacherId", "==", teacherUid)
+        );
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          container.textContent = "No messages yet.";
+          return;
+        }
+
+        container.innerHTML = "";
+
+        for (const docSnap of snap.docs) {
+          const data = docSnap.data();
+          let studentName = "Unknown";
+
+          try {
+            const studentSnap = await getDoc(doc(db, "students", data.studentId));
+            if (studentSnap.exists()) {
+              studentName = studentSnap.data().name || "Unknown";
+            }
+          } catch (e) {
+            console.warn("Could not fetch student name");
+          }
+
+          const date = data.timestamp?.toDate?.() || new Date(data.timestamp);
+
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <p><strong>From:</strong> ${studentName}</p>
+            <p><strong>Message:</strong> ${data.message}</p>
+            <p>${date.toLocaleString()}</p>
+          `;
+
+          container.appendChild(card);
+        }
+      } catch (err) {
+        console.error("Error loading messages:", err);
+        container.textContent = "Something went wrong.";
+      }
+    });
+
+    deleteAllBtn.onclick = async () => {
+      if (!teacherUid) return;
+
+      const confirmDelete = confirm("Are you sure you want to delete ALL messages?");
+      if (!confirmDelete) return;
+
+      try {
+        const q = query(collection(db, "messages"), where("teacherId", "==", teacherUid));
+        const snap = await getDocs(q);
+
+        const deletePromises = snap.docs.map((docSnap) =>
+          deleteDoc(doc(db, "messages", docSnap.id))
+        );
+
+        await Promise.all(deletePromises);
+
+        container.innerHTML = "All messages deleted.";
+      } catch (err) {
+        console.error("Error deleting messages:", err);
+        container.textContent = "Error deleting messages.";
+      }
+    };
+  </script>
+</body>
+</html>

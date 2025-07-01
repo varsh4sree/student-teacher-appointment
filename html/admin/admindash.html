@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+    background-size: cover;
+    margin: 0;
+    min-height: 100vh;
+    padding: 20px;
+    color: #fff;
+  }
+
+    h1 {
+      text-align: center;
+    }
+
+    .btn-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-top: 30px;
+   }
+
+
+    button {
+      padding: 10px 25px;
+      font-size: 16px;
+      background-color: #6a1b9a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #8e24aa;
+    }
+
+    .logout-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: #b71c1c;
+    }
+
+    a {
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <button class="logout-btn" id="logoutBtn">Logout</button>
+  <h1>Admin Dashboard</h1><hr><br><br>
+
+ <div class="btn-group">
+  <a href="addteacher.html"><button>Add Teacher</button></a><br>
+  <a href="updateteacher.html"><button>Update/Delete Teacher</button></a><br>
+  <a href="approvestudent.html"><button>Approve Students</button></a><br>
+  <a href="approveteacher.html"><button>Approve Teachers</button></a><br>
+</div>
+
+
+  <!-- Firebase Config and Auth -->
+  <script type="module">
+    // Firebase import
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    // Firebase Configuration (keep private in production)
+    const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+};
+// Replace with your own Firebase config to run this project
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Only allow access if user is logged in
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "adminlogin.html";
+      }
+    });
+
+    // Logout button function
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "adminlogin.html";
+      }).catch((error) => {
+        console.error("Logout failed:", error);
+        alert("Error logging out.");
+      });
+    });
+  </script>
+
+</body>
+</html>

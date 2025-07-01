@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Approved Appointments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 450px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.15);
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 15px 20px;
+      margin: 15px 0;
+      border-radius: 10px;
+      box-shadow: 0 0 5px #ccc;
+    }
+
+    .card p {
+      margin: 6px 0;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Approved Appointments</h2>
+    <div id="container">Loading...</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getFirestore, collection, query, where, getDocs, doc, getDoc
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    const app = initializeApp({
+      apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+    });
+
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const container = document.getElementById("container");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "teacherlogin.html";
+        return;
+      }
+
+      try {
+        const q = query(
+          collection(db, "appointments"),
+          where("teacherId", "==", user.uid),
+          where("status", "==", "approved")
+        );
+
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          container.textContent = "No approved appointments.";
+          return;
+        }
+
+        container.innerHTML = "";
+
+        for (const docSnap of snap.docs) {
+          const data = docSnap.data();
+          const card = document.createElement("div");
+          card.className = "card";
+
+          let studentName = "Student";
+          try {
+            const studentSnap = await getDoc(doc(db, "students", data.studentId));
+            if (studentSnap.exists()) {
+              studentName = studentSnap.data().name || studentName;
+            }
+          } catch (e) {
+            console.warn("Student name not found.");
+          }
+
+          card.innerHTML = `
+            <p><strong>${studentName}</strong></p>
+            <p><strong>Date:</strong> ${data.date}</p>
+            <p><strong>Time:</strong> ${data.time}</p>
+            <p><strong>Reason:</strong> ${data.reason || "—"}</p>
+            <p><strong>Status:</strong> Approved</p>
+          `;
+
+          container.appendChild(card);
+        }
+      } catch (err) {
+        console.error("Error loading approved appointments:", err);
+        container.textContent = "Something went wrong.";
+      }
+    });
+  </script>
+</body>
+</html>

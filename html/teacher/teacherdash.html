@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Teacher Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .dashboard {
+      max-width: 600px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .info {
+      margin: 10px 0;
+      color: #444;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-group a button,
+    .btn-group button {
+      padding: 12px;
+      font-size: 16px;
+      background-color: #6a1b9a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-group a button:hover,
+    .btn-group button:hover {
+      background-color: #8e24aa;
+    }
+    .btn-group button.logout {
+  background-color: #b71c1c !important;
+}
+
+.btn-group button.logout:hover {
+  background-color: #d32f2f !important;
+}
+
+
+  </style>
+</head>
+<body>
+
+  <div class="dashboard">
+    <h2>Welcome, <span id="teacherName">Loading...</span></h2>
+    <p class="info">Subject: <span id="subject">—</span></p>
+    <p class="info">Department: <span id="department">—</span></p>
+
+    <div class="btn-group">
+  <a href="schedule.html"><button>Schedule Appointment</button></a>
+  <a href="approveappt.html"><button>Approve / Cancel Appointments</button></a>
+  <a href="viewmsg.html"><button>View Messages</button></a>
+  <a href="viewappt.html"><button>View All Appointments</button></a>
+  <button id="logoutBtn" class="logout">Logout</button>
+</div>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+};
+// Replace with your own Firebase config to run this project
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const teacherNameEl = document.getElementById("teacherName");
+    const subjectEl = document.getElementById("subject");
+    const departmentEl = document.getElementById("department");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "teacherlogin.html";
+        return;
+      }
+
+      const docRef = doc(db, "teachers", user.uid);
+      const snap = await getDoc(docRef);
+
+      if (!snap.exists()) {
+        alert("Teacher record not found.");
+        window.location.href = "teacherlogin.html";
+        return;
+      }
+
+      const data = snap.data();
+      if (data.role !== "teacher" || !data.approved) {
+        alert("Access denied.");
+        window.location.href = "teacherlogin.html";
+        return;
+      }
+
+      teacherNameEl.textContent = data.name;
+      subjectEl.textContent = data.subject;
+      departmentEl.textContent = data.department;
+    });
+
+    document.getElementById("logoutBtn").onclick = async () => {
+      await signOut(auth);
+      window.location.href = "teacherlogin.html";
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Schedule Appointment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #444;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #6a1b9a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background: #8e24aa;
+    }
+
+    #msg {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Schedule a New Appointment</h2>
+
+    <label for="date">Date</label>
+    <input type="date" id="date" />
+
+    <label for="time">Time</label>
+    <input type="time" id="time" />
+
+    <label for="student">Select Student</label>
+    <select id="student">
+      <option value="">-- Select a student --</option>
+    </select>
+
+    <label for="note">Note (optional)</label>
+    <textarea id="note" rows="3" placeholder="E.g. Project help, doubts..."></textarea>
+
+    <button id="submitBtn">Add Schedule</button>
+    <div id="msg"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, getDocs, query
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+};
+// Replace with your own Firebase config to run this project
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+    const studentDropdown = document.getElementById("student");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "teacherlogin.html";
+      } else {
+        currentUserId = user.uid;
+
+        const studentQuery = query(collection(db, "students"));
+        const studentSnap = await getDocs(studentQuery);
+
+        studentSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.name) {
+            const option = document.createElement("option");
+            option.value = data.name;
+            option.textContent = data.name;
+            studentDropdown.appendChild(option);
+          }
+        });
+      }
+    });
+
+    document.getElementById("submitBtn").onclick = async () => {
+      const date = document.getElementById("date").value;
+      const time = document.getElementById("time").value;
+      const note = document.getElementById("note").value.trim();
+      const selectedStudent = studentDropdown.value;
+      const msg = document.getElementById("msg");
+
+      if (!date || !time || !selectedStudent) {
+        msg.textContent = "Please fill all fields and select a student.";
+        msg.style.color = "red";
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "schedules"), {
+          teacherId: currentUserId,
+          studentName: selectedStudent,
+          date,
+          time,
+          note
+        });
+
+        msg.textContent = "Schedule added successfully!";
+        msg.style.color = "green";
+
+        document.getElementById("date").value = "";
+        document.getElementById("time").value = "";
+        document.getElementById("note").value = "";
+        studentDropdown.value = "";
+      } catch (err) {
+        msg.textContent = "Error: " + err.message;
+        msg.style.color = "red";
+      }
+    };
+  </script>
+</body>
+</html>

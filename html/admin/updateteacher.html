@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Teachers</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 400px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.15);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    select, input, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #6a1b9a;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .delete-btn {
+      background-color: #b71c1c;
+      margin-top: -10px;
+    }
+
+    #message {
+      text-align: center;
+      color: green;
+      margin-bottom: 10px;
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .back-link a {
+      color: #6a1b9a;
+      text-decoration: none;
+    }
+
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Manage Teachers</h1>
+    <div id="message"></div>
+
+    <label for="teacherSelect">Select Teacher</label>
+    <select id="teacherSelect">
+      <option disabled selected>Loading...</option>
+    </select>
+
+    <input type="text" id="tName" placeholder="Name" />
+    <input type="text" id="tDept" placeholder="Department" />
+    <input type="text" id="tSubject" placeholder="Subject" />
+
+    <button id="updateBtn">Update Teacher</button>
+    <button class="delete-btn" id="deleteBtn">Delete Teacher</button>
+
+    <div class="back-link">
+      <a href="admindash.html">← Back to Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+};
+// Replace with your own Firebase config to run this project
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const select = document.getElementById("teacherSelect");
+    const nameField = document.getElementById("tName");
+    const deptField = document.getElementById("tDept");
+    const subjField = document.getElementById("tSubject");
+    const message = document.getElementById("message");
+
+    let teacherMap = {};
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        alert("You are not logged in. Redirecting to login...");
+        window.location.href = "adminlogin.html";
+        return;
+      }
+      await loadTeachers();
+    });
+
+    async function loadTeachers() {
+      select.innerHTML = `<option disabled selected>Select a teacher</option>`;
+      teacherMap = {};
+
+      const snapshot = await getDocs(collection(db, "teachers"));
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const id = docSnap.id;
+        teacherMap[id] = data;
+
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = data.name;
+        select.appendChild(option);
+      });
+    }
+
+    select.addEventListener("change", () => {
+      const selectedId = select.value;
+      const teacher = teacherMap[selectedId];
+
+      nameField.value = teacher.name || "";
+      deptField.value = teacher.department || "";
+      subjField.value = teacher.subject || "";
+      message.textContent = "";
+    });
+
+    document.getElementById("updateBtn").addEventListener("click", async () => {
+      const id = select.value;
+      if (!id) return;
+
+      const name = nameField.value.trim();
+      const dept = deptField.value.trim();
+      const subject = subjField.value.trim();
+
+      if (!name || !dept || !subject) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      await updateDoc(doc(db, "teachers", id), {
+        name,
+        department: dept,
+        subject
+      });
+
+      message.textContent = "Teacher updated successfully!";
+      await loadTeachers();
+      select.value = id;
+    });
+
+    document.getElementById("deleteBtn").addEventListener("click", async () => {
+      const id = select.value;
+      if (!id || !confirm("Are you sure you want to delete this teacher?")) return;
+
+      await deleteDoc(doc(db, "teachers", id));
+      message.textContent = "Teacher deleted.";
+      nameField.value = "";
+      deptField.value = "";
+      subjField.value = "";
+      await loadTeachers();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add Teacher</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: url('https://i.pinimg.com/736x/b1/3a/03/b13a032f1a7ed8af529cc28736e305ab.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #333;
+    }
+
+    label {
+      font-size: 15px;
+      margin-bottom: 5px;
+      display: block;
+      color: #333;
+    }
+
+    input {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    input:focus {
+      border-color: #6a1b9a;
+      outline: none;
+    }
+
+    button {
+      padding: 12px 20px;
+      width: 100%;
+      font-size: 15px;
+      background-color: #6a1b9a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-weight: 600;
+    }
+
+    button:hover {
+      background-color: #8e24aa;
+    }
+
+    #message {
+      margin-top: 12px;
+      font-weight: bold;
+      text-align: center;
+      color: green;
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    .back-link a {
+      color: #6a1b9a;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        padding: 25px 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Add New Teacher</h1>
+
+    <label for="tName">Name</label>
+    <input type="text" id="tName" placeholder="Enter teacher's name" />
+
+    <label for="tDept">Department</label>
+    <input type="text" id="tDept" placeholder="Enter department" />
+
+    <label for="tSubject">Subject</label>
+    <input type="text" id="tSubject" placeholder="Enter subject" />
+
+    <label for="tEmail">Email</label>
+    <input type="email" id="tEmail" placeholder="Enter teacher's email" />
+
+    <button id="addBtn">Add Teacher</button>
+
+    <div id="message"></div>
+
+    <div class="back-link">
+      <a href="admindash.html">← Back to Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+};
+// Replace with your own Firebase config to run this project
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "adminlogin.html";
+      }
+    });
+
+    const addBtn = document.getElementById("addBtn");
+    const messageDiv = document.getElementById("message");
+
+    addBtn.addEventListener("click", async () => {
+      const name = document.getElementById("tName").value.trim();
+      const dept = document.getElementById("tDept").value.trim();
+      const subject = document.getElementById("tSubject").value.trim();
+      const email = document.getElementById("tEmail").value.trim();
+
+      if (!name || !dept || !subject || !email) {
+        messageDiv.textContent = "Please fill in all fields.";
+        messageDiv.style.color = "red";
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "teachers"), {
+          name,
+          department: dept,
+          subject,
+          email,
+          role: "teacher"
+        });
+
+        messageDiv.innerHTML = `
+          Teacher added successfully.<br>
+          password: <strong>teacher123</strong>
+        `;
+        messageDiv.style.color = "green";
+
+        document.getElementById("tName").value = "";
+        document.getElementById("tDept").value = "";
+        document.getElementById("tSubject").value = "";
+        document.getElementById("tEmail").value = "";
+      } catch (error) {
+        console.error("Error adding teacher:", error);
+        messageDiv.textContent = "Error adding teacher.";
+        messageDiv.style.color = "red";
+      }
+    });
+  </script>
+</body>
+</html>
